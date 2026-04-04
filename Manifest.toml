@@ -1,0 +1,10 @@
+# This file is machine-generated - editing it directly is not advised
+
+julia_version = "1.12.5"
+manifest_format = "2.0"
+project_hash = "6fd63946f0e4a8452585cef51b9ed45ac97d8857"
+
+[[deps.DifferentiatedUniformization]]
+path = "."
+uuid = "c540aab8-9e94-4ba4-aed4-22a87e960a40"
+version = "0.1.0"
