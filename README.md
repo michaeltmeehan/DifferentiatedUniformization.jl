@@ -38,7 +38,7 @@ Version 0.1 is intentionally narrow.
 | `differentiate_uniformize` | Compute transient probabilities and gradients |
 | `propagate` | High-level model propagation |
 | `propagate_with_gradient` | High-level propagation plus parameter gradients |
-| `loglikelihood` | Likelihood evaluation for simple observation models |
+| `loglikelihood` | Likelihood evaluation for fully observed exact-state paths |
 | `loglikelihood_and_gradient` | Likelihood and gradient for calibration |
 | `simulate_gillespie` | Monte Carlo benchmarking and validation |
 
@@ -113,6 +113,17 @@ The primary gradient engine will be differentiated uniformization itself, rather
 
 ## Current status
 
-This repository is currently in the planning / bootstrap phase.
+This repository now has a working finite-state core for:
+
+- SI, SIS, and SIR state-space enumeration and sparse generators
+- plain uniformization
+- differentiated uniformization
+- exact-state path likelihoods for fully observed transitions
+
+Current gradient convention:
+
+- automatic gamma selection is treated as fixed within a differentiated-uniformization call
+- derivatives do not include sensitivity of the gamma-selection rule
+- for smooth finite-difference or optimizer behavior, prefer passing a fixed `γ`
 
 See [`PLAN.md`](./PLAN.md) for the detailed project brief.

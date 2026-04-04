@@ -8,6 +8,7 @@
         :SIRModel,
         :DUResult,
         :DUGradientResult,
+        :ExactStatePath,
         :UnimplementedDUError,
         :states,
         :generator,

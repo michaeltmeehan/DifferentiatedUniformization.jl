@@ -40,7 +40,7 @@ end
     DUGradientResult{T}
 
 Result container for transient probabilities and parameter gradients produced by
-differentiate uniformization routines.
+differentiated uniformization routines.
 """
 struct DUGradientResult{T}
     p::Vector{T}
@@ -48,4 +48,33 @@ struct DUGradientResult{T}
     n_terms::Int
     γ::T
     tail_mass_bound::T
+end
+
+"""
+    ExactStatePath(states, times)
+
+Container for a fully observed finite-state CTMC path observed at exact times.
+
+- `states[k]` is the observed CTMC state at time `times[k]`
+- `times` must be nondecreasing
+- `states` and `times` must have the same length and contain at least one entry
+
+This initial likelihood layer factorizes the path likelihood over consecutive
+observation intervals.
+"""
+struct ExactStatePath{S,T<:Real}
+    states::Vector{S}
+    times::Vector{T}
+
+    function ExactStatePath(states::AbstractVector, times::AbstractVector{<:Real})
+        length(states) == length(times) ||
+            throw(ArgumentError("states and times must have the same length"))
+        length(states) >= 1 || throw(ArgumentError("ExactStatePath must contain at least one observation"))
+
+        time_vec = collect(times)
+        all(diff(time_vec) .>= zero(eltype(time_vec))) ||
+            throw(ArgumentError("observation times must be nondecreasing"))
+
+        return new{eltype(states),eltype(time_vec)}(collect(states), time_vec)
+    end
 end

@@ -14,10 +14,12 @@ Implemented in this scaffold:
 - finite-state epidemic model types for SI, SIS, and SIR
 - explicit sparse generator construction for SI, SIS, and SIR
 - plain uniformization-based propagation for finite-state generators
+- differentiated uniformization-based gradient propagation
+- exact-state path likelihoods for fully observed discrete-time transitions
 - exact small-state validation tests against matrix exponential propagation
-- placeholder interfaces for gradients, likelihoods, and Gillespie simulation
+- placeholder interface for Gillespie simulation
 - baseline tests for loading, constructors, and deferred-method errors
 
 ## Next steps
 
-- implement differentiated uniformization and finite-difference gradient checks
+- expand toward thin inference wrappers once the current likelihood layer settles
