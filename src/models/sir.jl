@@ -4,7 +4,8 @@
 Finite-state susceptible-infectious-removed epidemic model with a fixed total
 population size.
 
-Parameter ordering for `generator(model, θ)`:
+Parameter ordering for `generator(model, θ)` and
+`generator_derivatives(model, θ)`:
 
 - `θ[1] = β`: infection rate for transitions `(S, I, R) -> (S - 1, I + 1, R)`
   with rate `β * S * I`
@@ -111,4 +112,58 @@ function generator(model::SIRModel, θ::AbstractVector{<:Real})
     end
 
     return sparse(rows, cols, vals, n_states, n_states)
+end
+
+function generator_derivatives(model::SIRModel, θ::AbstractVector{<:Real})
+    length(θ) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [β, γ]"))
+    θ[1] >= 0 || throw(ArgumentError("SIRModel parameter β must be nonnegative"))
+    θ[2] >= 0 || throw(ArgumentError("SIRModel parameter γ must be nonnegative"))
+
+    state_space = states(model)
+    index_by_state = Dict(state => idx for (idx, state) in enumerate(state_space))
+    n_states = length(state_space)
+
+    rows_beta = Int[]
+    cols_beta = Int[]
+    vals_beta = Float64[]
+    rows_gamma = Int[]
+    cols_gamma = Int[]
+    vals_gamma = Float64[]
+
+    for (from_idx, (s, i, r)) in enumerate(state_space)
+        total_beta = 0.0
+        total_gamma = 0.0
+
+        if s > 0 && i > 0
+            to_state = (s - 1, i + 1, r)
+            rate = Float64(s * i)
+            to_idx = index_by_state[to_state]
+            push!(rows_beta, to_idx)
+            push!(cols_beta, from_idx)
+            push!(vals_beta, rate)
+            total_beta += rate
+        end
+
+        if i > 0
+            to_state = (s, i - 1, r + 1)
+            rate = Float64(i)
+            to_idx = index_by_state[to_state]
+            push!(rows_gamma, to_idx)
+            push!(cols_gamma, from_idx)
+            push!(vals_gamma, rate)
+            total_gamma += rate
+        end
+
+        push!(rows_beta, from_idx)
+        push!(cols_beta, from_idx)
+        push!(vals_beta, -total_beta)
+        push!(rows_gamma, from_idx)
+        push!(cols_gamma, from_idx)
+        push!(vals_gamma, -total_gamma)
+    end
+
+    return [
+        sparse(rows_beta, cols_beta, vals_beta, n_states, n_states),
+        sparse(rows_gamma, cols_gamma, vals_gamma, n_states, n_states),
+    ]
 end
