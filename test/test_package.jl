@@ -9,6 +9,7 @@
         :DUResult,
         :DUGradientResult,
         :ExactStatePath,
+        :ExactPathLogDensity,
         :UnimplementedDUError,
         :states,
         :generator,
@@ -20,6 +21,9 @@
         :propagate_with_gradient,
         :loglikelihood,
         :loglikelihood_and_gradient,
+        :dimension,
+        :logdensity,
+        :logdensity_and_gradient,
         :simulate_gillespie,
     ]
 

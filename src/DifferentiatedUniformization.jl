@@ -11,6 +11,7 @@ export AbstractCTMCModel,
     DUResult,
     DUGradientResult,
     ExactStatePath,
+    ExactPathLogDensity,
     UnimplementedDUError,
     states,
     generator,
@@ -22,6 +23,9 @@ export AbstractCTMCModel,
     propagate_with_gradient,
     loglikelihood,
     loglikelihood_and_gradient,
+    dimension,
+    logdensity,
+    logdensity_and_gradient,
     simulate_gillespie
 
 include("core/types.jl")
