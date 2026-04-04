@@ -1,0 +1,11 @@
+/docs/build/
+/docs/site/
+/Manifest.toml.bak
+/coverage/
+*.jl.cov
+*.jl.*.cov
+*.jl.mem
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
