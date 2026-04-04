@@ -102,6 +102,33 @@ Current inference bridge:
 - a direct `LogDensityProblems.jl` adapter is deferred so the core package can
   stay dependency-light while the interface settles
 
+## Calibration workflow
+
+The intended current route for calibration-oriented use is:
+
+1. construct a finite-state model such as `SIModel`, `SISModel`, or `SIRModel`
+2. build an `ExactStatePath` from fully observed states at exact times
+3. evaluate `loglikelihood(model, θ, data; ...)` or
+   `loglikelihood_and_gradient(model, θ, data; ...)`
+4. optionally wrap the problem as `ExactPathLogDensity(model, data; ...)`
+5. use the differentiated-uniformization gradient in a gradient-based optimizer
+   or optimization loop
+
+The main intended inference workflow is gradient-based estimation, because
+differentiated uniformization provides direct likelihood gradients without
+relying on generic AD through the propagator.
+
+See [examples/gradient_estimation_example.jl](/C:/Users/jc213439/Dropbox/dev/DifferentiatedUniformization/examples/gradient_estimation_example.jl)
+for a small synthetic SI estimation example using a bounded parameter transform
+and backtracking gradient descent on the negative log-likelihood.
+
+See [examples/calibration_example.jl](/C:/Users/jc213439/Dropbox/dev/DifferentiatedUniformization/examples/calibration_example.jl)
+for a small synthetic SI calibration workflow based on a deterministic grid
+search. That scan is best viewed as a diagnostic or visualization tool rather
+than the main inference route. When scanning or optimizing over a parameter
+range with fixed `gamma`, choose a value that dominates the maximum exit rate
+over the whole region.
+
 ## Current status
 
 This repository now has a working finite-state core for:
@@ -111,6 +138,8 @@ This repository now has a working finite-state core for:
 - differentiated uniformization
 - exact-state path likelihoods for fully observed transitions
 - a thin log-density wrapper for calibration-oriented workflows
+- a small synthetic calibration example on exact-state path data
+- a small synthetic gradient-based estimation example using DU gradients
 
 Current gradient convention:
 

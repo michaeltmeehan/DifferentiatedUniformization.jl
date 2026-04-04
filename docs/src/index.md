@@ -40,6 +40,34 @@ The gradient convention is the same as the rest of the package:
 A direct `LogDensityProblems.jl` adapter is deferred until the package
 interfaces settle a bit more.
 
+## Calibration workflow
+
+The main intended calibration workflow is gradient-based:
+
+1. choose a finite-state model and parameter ordering
+2. construct an `ExactStatePath`
+3. evaluate `loglikelihood` or `loglikelihood_and_gradient`
+4. optionally wrap the same problem as `ExactPathLogDensity`
+5. use the differentiated-uniformization gradient in a gradient-based optimizer
+   or optimization loop
+
+The example
+[examples/gradient_estimation_example.jl](/C:/Users/jc213439/Dropbox/dev/DifferentiatedUniformization/examples/gradient_estimation_example.jl)
+shows a complete synthetic SI estimation workflow using DU gradients, a bounded
+parameter transform, and backtracking gradient descent on the negative
+log-likelihood.
+
+The grid-scan example
+[examples/calibration_example.jl](/C:/Users/jc213439/Dropbox/dev/DifferentiatedUniformization/examples/calibration_example.jl)
+is still useful, but mainly as a diagnostic or visualization tool rather than
+the main inference route.
+
+As elsewhere in the package, gradients treat automatic gamma selection as fixed
+within a differentiated-uniformization call, so passing a fixed `gamma` is
+recommended for smooth calibration workflows. When scanning or optimizing over a
+region with fixed `gamma`, choose a value that is at least as large as the
+maximum exit rate over that whole region.
+
 ## Next steps
 
 - add a direct `LogDensityProblems.jl` adapter once the package interface settles
