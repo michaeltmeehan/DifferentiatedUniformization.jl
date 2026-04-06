@@ -6,6 +6,8 @@ uniformization under the column-vector convention `dp/dt = Q * p`.
 
 If omitted, the uniformization rate is chosen as the maximum exit rate
 `maximum(-diag(Q))`.
+
+The result is returned as `DUResult`.
 """
 function uniformize(
     Q,
@@ -74,6 +76,10 @@ end
 
 High-level transient probability propagation wrapper for finite-state CTMC
 models.
+
+This is the main model-facing propagation entry point. It constructs the model
+generator, converts `p0` to a probability vector via `initial_distribution`,
+and then calls `uniformize(...)`.
 """
 function propagate(
     model::AbstractCTMCModel,

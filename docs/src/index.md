@@ -1,73 +1,71 @@
 # DifferentiatedUniformization.jl
 
 `DifferentiatedUniformization.jl` is a Julia package for finite-state,
-time-homogeneous CTMCs with uniformization and differentiated uniformization as
-its core numerical targets.
+time-homogeneous continuous-time Markov chains (CTMCs), with stochastic
+epidemic models as the motivating application.
 
-## Status
+The package currently supports:
 
-Implemented in the current repository:
-
-- top-level package module and public API surface
-- finite-state epidemic model types for SI, SIS, and SIR
-- explicit sparse generator construction for SI, SIS, and SIR
-- plain uniformization-based propagation for finite-state generators
-- differentiated uniformization-based gradient propagation
-- exact-state path likelihoods for fully observed discrete-time transitions
+- explicit finite-state SI, SIS, and SIR models
+- generator construction under a consistent column-vector convention
+- transient propagation by uniformization
+- first derivatives by differentiated uniformization
+- exact-state path likelihoods for fully observed transitions
 - a thin package-local log-density wrapper for calibration workflows
-- exact small-state validation tests against matrix exponential propagation
-- placeholder interface for Gillespie simulation
 
-## Log-density bridge
+## What To Read First
 
-`ExactPathLogDensity(model, data; ...)` is a small wrapper around the current
-exact-state path likelihood layer.
+- [Getting Started](getting-started.md): the shortest path from model to propagation
+- [Calibration Tutorial](calibration-tutorial.md): end-to-end gradient-based estimation on synthetic data
+- [Conventions](conventions.md): the probability-vector, generator, and gamma conventions used everywhere
 
-- it stores a model, observed data, and fixed likelihood configuration
-- it uses the same parameter ordering as `generator(model, θ)`
-- `dimension(problem)` reports the expected parameter vector length
-- `logdensity(problem, θ)` and `logdensity_and_gradient(problem, θ)` forward to
-  the existing likelihood functions
+## Documentation Map
 
-The gradient convention is the same as the rest of the package:
+- [Overview](overview.md)
+- [Scope And Models](scope-and-models.md)
+- [Conventions](conventions.md)
+- [Uniformization](uniformization.md)
+- [Differentiated Uniformization](differentiated-uniformization.md)
+- [Exact-State Path Likelihoods](likelihoods.md)
+- [Calibration Tutorial](calibration-tutorial.md)
+- [Getting Started](getting-started.md)
+- [Architecture](architecture.md)
+- [Limitations](limitations.md)
 
-- if `gamma` is omitted, it is chosen from the generator and then treated as
-  fixed within each differentiated-uniformization call
-- derivatives do not include sensitivity of the automatic gamma-selection rule
-- when smooth optimizer or finite-difference behavior matters, pass a fixed
-  `gamma`
+## Supported Workflows
 
-A direct `LogDensityProblems.jl` adapter is deferred until the package
-interfaces settle a bit more.
+Core supported workflows:
 
-## Calibration workflow
+1. build a finite-state model such as `SIModel`, `SISModel`, or `SIRModel`
+2. inspect the ordered state space with `states(model)`
+3. construct `generator(model, θ)` and, when needed, `generator_derivatives(model, θ)`
+4. propagate transient probabilities with `propagate(...)`
+5. propagate probabilities and gradients with `propagate_with_gradient(...)`
+6. evaluate path likelihoods with `loglikelihood(...)` and `loglikelihood_and_gradient(...)`
+7. wrap the likelihood as `ExactPathLogDensity(...)` for optimization-style workflows
 
-The main intended calibration workflow is gradient-based:
+Diagnostic / sanity-check workflows:
 
-1. choose a finite-state model and parameter ordering
-2. construct an `ExactStatePath`
-3. evaluate `loglikelihood` or `loglikelihood_and_gradient`
-4. optionally wrap the same problem as `ExactPathLogDensity`
-5. use the differentiated-uniformization gradient in a gradient-based optimizer
-   or optimization loop
+- small grid scans over one parameter
+- direct inspection of generators and derivative matrices
+- exact comparison against matrix exponential calculations on very small systems
 
-The example
-[examples/gradient_estimation_example.jl](/C:/Users/jc213439/Dropbox/dev/DifferentiatedUniformization/examples/gradient_estimation_example.jl)
-shows a complete synthetic SI estimation workflow using DU gradients, a bounded
-parameter transform, and backtracking gradient descent on the negative
-log-likelihood.
+Deferred workflows:
 
-The grid-scan example
-[examples/calibration_example.jl](/C:/Users/jc213439/Dropbox/dev/DifferentiatedUniformization/examples/calibration_example.jl)
-is still useful, but mainly as a diagnostic or visualization tool rather than
-the main inference route.
+- hidden-state or partial-observation models
+- particle methods, filtering, or smoothing
+- direct Turing.jl integration
+- a direct external `LogDensityProblems.jl` adapter
 
-As elsewhere in the package, gradients treat automatic gamma selection as fixed
-within a differentiated-uniformization call, so passing a fixed `gamma` is
-recommended for smooth calibration workflows. When scanning or optimizing over a
-region with fixed `gamma`, choose a value that is at least as large as the
-maximum exit rate over that whole region.
+## Important Conventions
 
-## Next steps
+- Probability vectors are columns.
+- The forward equation is `dp/dt = Q * p`.
+- `Q[to, from]` is the transition rate from state `from` to state `to`.
+- Columns of `Q` sum to zero.
+- If `gamma` is omitted in differentiated propagation, it is selected from `Q`
+  and then treated as fixed within that call.
+- Derivatives do not include sensitivity of the automatic `gamma` selection rule.
 
-- add a direct `LogDensityProblems.jl` adapter once the package interface settles
+For calibration-oriented work, especially finite differences or gradient-based
+optimization, prefer passing a fixed `gamma`.

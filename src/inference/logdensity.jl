@@ -62,6 +62,8 @@ end
     dimension(problem::ExactPathLogDensity)
 
 Return the expected length of the parameter vector for `problem`.
+
+This is a thin convenience helper for optimization-style workflows.
 """
 dimension(problem::ExactPathLogDensity) = _parameter_dimension(problem.model)
 
@@ -69,6 +71,9 @@ dimension(problem::ExactPathLogDensity) = _parameter_dimension(problem.model)
     logdensity(problem::ExactPathLogDensity, θ)
 
 Evaluate the wrapped exact-state path log-likelihood at parameter vector `θ`.
+
+The parameter ordering is exactly the model ordering used by
+`generator(model, θ)`.
 """
 function logdensity(problem::ExactPathLogDensity, θ::AbstractVector{<:Real})
     return loglikelihood(
@@ -86,6 +91,9 @@ end
 
 Evaluate the wrapped exact-state path log-likelihood and gradient at parameter
 vector `θ`.
+
+The returned gradient uses the same fixed-gamma convention as
+`loglikelihood_and_gradient(...)`.
 """
 function logdensity_and_gradient(problem::ExactPathLogDensity, θ::AbstractVector{<:Real})
     return loglikelihood_and_gradient(

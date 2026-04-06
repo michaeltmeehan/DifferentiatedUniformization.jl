@@ -7,6 +7,8 @@ using differentiated uniformization.
 When `gamma` is omitted, it is chosen from `Q` and then held fixed during the
 derivative propagation. This keeps the implementation explicit and matches the
 piecewise-smooth behavior of the current finite-state validation workflow.
+
+The result is returned as `DUGradientResult`.
 """
 function differentiate_uniformize(
     Q,
@@ -101,6 +103,10 @@ end
 
 High-level transient probability and gradient propagation wrapper for
 finite-state CTMC models.
+
+This is the main model-facing gradient propagation entry point. It constructs
+`Q` and `dQ`, converts the initial condition via `initial_distribution`, and
+then calls `differentiate_uniformize(...)`.
 """
 function propagate_with_gradient(
     model::AbstractCTMCModel,

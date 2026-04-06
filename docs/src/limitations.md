@@ -1,0 +1,45 @@
+# Limitations And Deferred Features
+
+This page describes what the package does not currently try to do.
+
+## Current Limitations
+
+- finite-state models only
+- time-homogeneous generators only
+- exact-state path likelihoods only
+- first derivatives only
+- canonical epidemic models only
+- no built-in optimizer dependency
+- no implemented Gillespie simulation yet
+
+## Important Gradient Caveat
+
+Automatic `gamma` selection is not differentiated through.
+
+Current behavior:
+
+- if `gamma` is omitted, the package chooses a valid value from `Q`
+- that value is then treated as fixed inside the differentiated call
+
+Implication:
+
+- for optimization or finite-difference checks, fixed `gamma` is usually the
+  safer choice
+
+## Deferred Features
+
+- SEIR implementation
+- hidden-state / partial-observation models
+- filtering and smoothing
+- particle methods
+- direct Turing.jl integration
+- a direct `LogDensityProblems.jl` adapter
+- broader interoperability layers
+
+## What The Current Package Is Best At
+
+The current implementation is best viewed as:
+
+- a validated finite-state CTMC core
+- an explicit reference implementation for SI/SIS/SIR
+- a testbed for gradient-based calibration using differentiated uniformization
