@@ -1,5 +1,5 @@
 """
-    ExactPathLogDensity(model, data; tol=1e-12, gamma=nothing, max_terms=nothing)
+    ExactPathLogDensity(model, data; tol=1e-12, gamma=nothing, max_terms=nothing, backend=:sparse)
 
 Thin log-density wrapper around the exact-state path likelihood layer.
 
@@ -9,14 +9,14 @@ This object is intentionally minimal. It stores:
 - an `ExactStatePath`
 - fixed configuration for the likelihood evaluation
 
-Parameter ordering is exactly the ordering used by `generator(model, θ)` and
-`generator_derivatives(model, θ)` for the wrapped model.
+Parameter ordering is exactly the ordering used by `generator(model, theta)` and
+`generator_derivatives(model, theta)` for the wrapped model.
 
 For the canonical models currently implemented:
 
-- `SIModel`: `θ = [β]`
-- `SISModel`: `θ = [β, γ]`
-- `SIRModel`: `θ = [β, γ]`
+- `SIModel`: `theta = [beta]`
+- `SISModel`: `theta = [beta, gamma]`
+- `SIRModel`: `theta = [beta, gamma]`
 
 Gradient convention:
 
@@ -26,8 +26,14 @@ Gradient convention:
 - when smooth optimizer or finite-difference behavior matters, pass a fixed
   `gamma`
 
-This wrapper is package-local for now. It intentionally mirrors the conceptual
-role of a `LogDensityProblems.jl` object without adding a new dependency yet.
+Backend convention:
+
+- `backend=:sparse` uses the reference explicit sparse-matrix generator path
+- `backend=:structured` uses a structured generator operator where available
+
+This wrapper is package-local for now. It fills the same conceptual role as a
+lightweight `LogDensityProblems`-style object without forcing the core package
+design around an external dependency.
 """
 struct ExactPathLogDensity{M<:AbstractCTMCModel,D<:ExactStatePath,T<:Real,G}
     model::M
@@ -35,6 +41,7 @@ struct ExactPathLogDensity{M<:AbstractCTMCModel,D<:ExactStatePath,T<:Real,G}
     tol::T
     gamma::G
     max_terms::Union{Nothing,Int}
+    backend::Symbol
 end
 
 function ExactPathLogDensity(
@@ -43,18 +50,21 @@ function ExactPathLogDensity(
     tol::Real=default_tail_tolerance(),
     gamma=nothing,
     max_terms=nothing,
+    backend::Symbol=:sparse,
 )
     tol >= 0 || throw(ArgumentError("tol must be nonnegative"))
     if max_terms !== nothing
         max_terms isa Integer || throw(ArgumentError("max_terms must be an integer or nothing"))
         max_terms >= 1 || throw(ArgumentError("max_terms must be at least 1"))
     end
+    backend in (:sparse, :structured) || throw(ArgumentError("backend must be :sparse or :structured"))
     return ExactPathLogDensity{typeof(model),typeof(data),typeof(float(tol)),typeof(gamma)}(
         model,
         data,
         float(tol),
         gamma,
         max_terms,
+        backend,
     )
 end
 
@@ -68,41 +78,44 @@ This is a thin convenience helper for optimization-style workflows.
 dimension(problem::ExactPathLogDensity) = _parameter_dimension(problem.model)
 
 """
-    logdensity(problem::ExactPathLogDensity, θ)
+    logdensity(problem::ExactPathLogDensity, theta)
 
-Evaluate the wrapped exact-state path log-likelihood at parameter vector `θ`.
+Evaluate the wrapped exact-state path log-likelihood at parameter vector
+`theta`.
 
 The parameter ordering is exactly the model ordering used by
-`generator(model, θ)`.
+`generator(model, theta)`.
 """
-function logdensity(problem::ExactPathLogDensity, θ::AbstractVector{<:Real})
+function logdensity(problem::ExactPathLogDensity, theta::AbstractVector{<:Real})
     return loglikelihood(
         problem.model,
-        θ,
+        theta,
         problem.data;
         tol=problem.tol,
         gamma=problem.gamma,
         max_terms=problem.max_terms,
+        backend=problem.backend,
     )
 end
 
 """
-    logdensity_and_gradient(problem::ExactPathLogDensity, θ)
+    logdensity_and_gradient(problem::ExactPathLogDensity, theta)
 
 Evaluate the wrapped exact-state path log-likelihood and gradient at parameter
-vector `θ`.
+vector `theta`.
 
 The returned gradient uses the same fixed-gamma convention as
 `loglikelihood_and_gradient(...)`.
 """
-function logdensity_and_gradient(problem::ExactPathLogDensity, θ::AbstractVector{<:Real})
+function logdensity_and_gradient(problem::ExactPathLogDensity, theta::AbstractVector{<:Real})
     return loglikelihood_and_gradient(
         problem.model,
-        θ,
+        theta,
         problem.data;
         tol=problem.tol,
         gamma=problem.gamma,
         max_terms=problem.max_terms,
+        backend=problem.backend,
     )
 end
 
@@ -113,4 +126,4 @@ _parameter_dimension(model::AbstractCTMCModel) =
     throw(ArgumentError("parameter dimension is not defined for model type $(typeof(model))"))
 
 const LOGDENSITY_TODO =
-    "A direct LogDensityProblems.jl adapter is deferred; ExactPathLogDensity provides the same thin wrapper role without adding a dependency yet."
+    "A direct external LogDensityProblems adapter is still deferred; ExactPathLogDensity provides the same thin wrapper role while the package API settles."

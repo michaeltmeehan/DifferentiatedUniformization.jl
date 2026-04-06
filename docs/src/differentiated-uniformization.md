@@ -26,6 +26,9 @@ High-level model usage:
 result = propagate_with_gradient(model, theta, x0, t; gamma=..., tol=...)
 ```
 
+The high-level wrapper also accepts `backend=:sparse` or `backend=:structured`
+where a structured operator implementation is available.
+
 The returned [`DUGradientResult`](/C:/Users/jc213439/Dropbox/dev/DifferentiatedUniformization/src/core/types.jl)
 contains:
 

@@ -10,6 +10,7 @@ The package currently supports:
 - generator construction under a consistent column-vector convention
 - transient propagation by uniformization
 - first derivatives by differentiated uniformization
+- sparse and structured generator backends for the canonical models
 - exact-state path likelihoods for fully observed transitions
 - a thin package-local log-density wrapper for calibration workflows
 - Gillespie simulation, ensemble summaries, and empirical DU comparisons
@@ -26,6 +27,7 @@ The package currently supports:
 - [Overview](overview.md)
 - [Scope And Models](scope-and-models.md)
 - [Conventions](conventions.md)
+- [Generator Backends](backends.md)
 - [Uniformization](uniformization.md)
 - [Differentiated Uniformization](differentiated-uniformization.md)
 - [Exact-State Path Likelihoods](likelihoods.md)
@@ -52,6 +54,7 @@ Diagnostic / sanity-check workflows:
 
 - small grid scans over one parameter
 - direct inspection of generators and derivative matrices
+- sparse-versus-structured backend agreement checks
 - exact comparison against matrix exponential calculations on very small systems
 - Monte Carlo comparison of empirical state distributions against DU propagation
 
@@ -61,6 +64,7 @@ Deferred workflows:
 - particle methods, filtering, or smoothing
 - direct Turing.jl integration
 - a direct external `LogDensityProblems.jl` adapter
+- broader structured backends beyond the canonical models
 
 ## Important Conventions
 

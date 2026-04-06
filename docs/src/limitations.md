@@ -11,6 +11,7 @@ This page describes what the package does not currently try to do.
 - canonical epidemic models only
 - no built-in optimizer dependency
 - no hidden-state observation model
+- structured operator backend remains limited to the canonical SI, SIS, and SIR models
 
 ## Important Gradient Caveat
 
@@ -36,6 +37,7 @@ Implication:
 - a direct `LogDensityProblems.jl` adapter
 - broader interoperability layers
 - parallel ensemble simulation
+- broader structured backends beyond the canonical models
 
 ## What The Current Package Is Best At
 

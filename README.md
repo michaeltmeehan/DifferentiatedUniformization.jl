@@ -48,6 +48,7 @@ Version 0.1 is intentionally narrow.
 | `loglikelihood_and_gradient` | Likelihood and gradient for calibration |
 | `ExactPathLogDensity` | Thin log-density wrapper for calibration workflows |
 | `simulate_gillespie` | Monte Carlo benchmarking and validation |
+| `generator_operator` | Backend-aware generator construction for propagation |
 
 ## Canonical models
 
@@ -102,6 +103,14 @@ Current inference bridge:
 - a direct `LogDensityProblems.jl` adapter is deferred so the core package can
   stay dependency-light while the interface settles
 
+Current generator backends:
+
+- `backend=:sparse` is the reference explicit sparse-matrix path used for
+  validation and simulation
+- `backend=:structured` is the current operator path; it is implemented for
+  `SIModel`, `SISModel`, and `SIRModel` and avoids full generator
+  materialization during propagation and differentiated propagation
+
 ## Calibration workflow
 
 The intended current route for calibration-oriented use is:
@@ -134,6 +143,7 @@ over the whole region.
 This repository now has a working finite-state core for:
 
 - SI, SIS, and SIR state-space enumeration and sparse generators
+- an operator-based generator interface with an initial structured SI backend
 - plain uniformization
 - differentiated uniformization
 - exact-state path likelihoods for fully observed transitions

@@ -36,6 +36,8 @@ ll, grad = loglikelihood_and_gradient(model, theta, data; gamma=...)
 ```
 
 The gradient is obtained through the differentiated-uniformization machinery.
+Both functions also accept `backend=:sparse` or `backend=:structured` so the
+likelihood layer can follow the same generator backend used for propagation.
 
 ## Impossible Paths
 

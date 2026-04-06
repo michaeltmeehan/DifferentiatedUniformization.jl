@@ -9,7 +9,7 @@ Parameter ordering for `generator(model, θ)` and
 
 - `θ[1] = β`: infection rate for transitions `(S, I, R) -> (S - 1, I + 1, R)`
   with rate `β * S * I`
-- `θ[2] = γ`: recovery rate for transitions `(S, I, R) -> (S, I - 1, R + 1)`
+- `θ[2] = γ`: recovery rate for transitions `(S, I - 1, R + 1)`
   with rate `γ * I`
 
 Generator convention:
@@ -18,6 +18,9 @@ Generator convention:
 - `dp/dt = Q * p`
 - each column of `Q` sums to zero
 - off-diagonal entry `Q[to, from]` is the transition rate from `from` to `to`
+
+This model also provides a structured operator backend for propagation and
+gradient propagation without materializing the full generator matrix.
 """
 struct SIRModel <: AbstractCTMCModel
     population_size::Int
@@ -26,6 +29,21 @@ struct SIRModel <: AbstractCTMCModel
         population_size > 0 || throw(ArgumentError("population_size must be positive"))
         return new(population_size)
     end
+end
+
+struct SIRStructuredGenerator <: AbstractGeneratorOperator
+    population_size::Int
+    beta::Float64
+    gamma::Float64
+    state_space::Vector{Tuple{Int,Int,Int}}
+    index_by_state::Dict{Tuple{Int,Int,Int},Int}
+end
+
+struct SIRStructuredDerivative <: AbstractGeneratorOperator
+    population_size::Int
+    parameter_index::Int
+    state_space::Vector{Tuple{Int,Int,Int}}
+    index_by_state::Dict{Tuple{Int,Int,Int},Int}
 end
 
 """
@@ -166,4 +184,107 @@ function generator_derivatives(model::SIRModel, θ::AbstractVector{<:Real})
         sparse(rows_beta, cols_beta, vals_beta, n_states, n_states),
         sparse(rows_gamma, cols_gamma, vals_gamma, n_states, n_states),
     ]
+end
+
+function structured_generator_operator(model::SIRModel, θ::AbstractVector{<:Real})
+    length(θ) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [β, γ]"))
+    β = Float64(θ[1])
+    γ = Float64(θ[2])
+    β >= 0.0 || throw(ArgumentError("SIRModel parameter β must be nonnegative"))
+    γ >= 0.0 || throw(ArgumentError("SIRModel parameter γ must be nonnegative"))
+    state_space = states(model)
+    index_by_state = Dict(state => idx for (idx, state) in enumerate(state_space))
+    return SIRStructuredGenerator(model.population_size, β, γ, state_space, index_by_state)
+end
+
+function structured_generator_derivative_operators(model::SIRModel, θ::AbstractVector{<:Real})
+    length(θ) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [β, γ]"))
+    θ[1] >= 0 || throw(ArgumentError("SIRModel parameter β must be nonnegative"))
+    θ[2] >= 0 || throw(ArgumentError("SIRModel parameter γ must be nonnegative"))
+    state_space = states(model)
+    index_by_state = Dict(state => idx for (idx, state) in enumerate(state_space))
+    return [
+        SIRStructuredDerivative(model.population_size, 1, state_space, index_by_state),
+        SIRStructuredDerivative(model.population_size, 2, state_space, index_by_state),
+    ]
+end
+
+state_dimension(op::SIRStructuredGenerator) = length(op.state_space)
+state_dimension(op::SIRStructuredDerivative) = length(op.state_space)
+
+function maximum_exit_rate(op::SIRStructuredGenerator)
+    max_rate = 0.0
+    for (s, i, _) in op.state_space
+        max_rate = max(max_rate, op.beta * s * i + op.gamma * i)
+    end
+    return max_rate
+end
+
+function maximum_exit_rate(op::SIRStructuredDerivative)
+    max_rate = 0.0
+    for (s, i, _) in op.state_space
+        rate = op.parameter_index == 1 ? s * i : i
+        max_rate = max(max_rate, float(rate))
+    end
+    return max_rate
+end
+
+function apply_operator(op::SIRStructuredGenerator, v::AbstractVector)
+    length(v) == state_dimension(op) || throw(ArgumentError("vector length does not match SIR structured operator dimension"))
+    out = zeros(Float64, length(v))
+
+    for (from_idx, (s, i, r)) in enumerate(op.state_space)
+        infection_rate = s > 0 && i > 0 ? op.beta * s * i : 0.0
+        recovery_rate = i > 0 ? op.gamma * i : 0.0
+        total_rate = infection_rate + recovery_rate
+
+        out[from_idx] -= total_rate * v[from_idx]
+
+        if infection_rate > 0.0
+            to_idx = op.index_by_state[(s - 1, i + 1, r)]
+            out[to_idx] += infection_rate * v[from_idx]
+        end
+
+        if recovery_rate > 0.0
+            to_idx = op.index_by_state[(s, i - 1, r + 1)]
+            out[to_idx] += recovery_rate * v[from_idx]
+        end
+    end
+
+    return out
+end
+
+function apply_operator(op::SIRStructuredDerivative, v::AbstractVector)
+    length(v) == state_dimension(op) || throw(ArgumentError("vector length does not match SIR structured derivative dimension"))
+    out = zeros(Float64, length(v))
+
+    for (from_idx, (s, i, r)) in enumerate(op.state_space)
+        if op.parameter_index == 1
+            rate = s > 0 && i > 0 ? float(s * i) : 0.0
+            out[from_idx] -= rate * v[from_idx]
+            if rate > 0.0
+                to_idx = op.index_by_state[(s - 1, i + 1, r)]
+                out[to_idx] += rate * v[from_idx]
+            end
+        else
+            rate = i > 0 ? float(i) : 0.0
+            out[from_idx] -= rate * v[from_idx]
+            if rate > 0.0
+                to_idx = op.index_by_state[(s, i - 1, r + 1)]
+                out[to_idx] += rate * v[from_idx]
+            end
+        end
+    end
+
+    return out
+end
+
+function materialize(op::SIRStructuredGenerator)
+    model = SIRModel(op.population_size)
+    return generator(model, [op.beta, op.gamma])
+end
+
+function materialize(op::SIRStructuredDerivative)
+    model = SIRModel(op.population_size)
+    return generator_derivatives(model, [1.0, 1.0])[op.parameter_index]
 end

@@ -16,6 +16,8 @@
         :states,
         :generator,
         :generator_derivatives,
+        :generator_operator,
+        :generator_derivative_operators,
         :initial_distribution,
         :uniformize,
         :differentiate_uniformize,

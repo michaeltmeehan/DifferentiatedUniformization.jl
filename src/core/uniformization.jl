@@ -19,10 +19,9 @@ function uniformize(
     max_terms=nothing,
 )
     t >= 0 || throw(ArgumentError("time t must be nonnegative"))
-    size(Q, 1) == size(Q, 2) || throw(ArgumentError("generator matrix must be square"))
 
     p0_vec = Float64.(collect(p0))
-    size(Q, 1) == length(p0_vec) ||
+    state_dimension(Q) == length(p0_vec) ||
         throw(ArgumentError("generator dimension must match initial distribution length"))
 
     gamma_value = choose_uniformization_rate(Q; gamma=gamma, γ=γ)
@@ -30,22 +29,19 @@ function uniformize(
         return DUResult(copy(p0_vec), 1, gamma_value, 0.0)
     end
 
-    max_exit_rate = maximum(-Float64.(diag(Q)))
+    max_exit_rate = maximum_exit_rate(Q)
     gamma_value + sqrt(eps(Float64)) >= max_exit_rate ||
         throw(ArgumentError("uniformization rate gamma must be at least the maximum exit rate"))
 
     lambda = gamma_value * Float64(t)
     n_terms, tail_mass_bound = choose_truncation_terms(lambda; tol=tol, max_terms=max_terms)
 
-    n_states = size(Q, 1)
-    P = sparse(1:n_states, 1:n_states, ones(Float64, n_states), n_states, n_states) + Q / gamma_value
-
     state_term = copy(p0_vec)
     weight = exp(-lambda)
     p = weight .* state_term
 
     for n in 1:(n_terms - 1)
-        state_term = P * state_term
+        state_term = _apply_uniformized_step(Q, state_term, gamma_value)
         weight *= lambda / n
         p .+= weight .* state_term
     end
@@ -90,8 +86,13 @@ function propagate(
     gamma=nothing,
     γ=nothing,
     max_terms=nothing,
+    backend::Symbol=:sparse,
 )
-    Q = generator(model, θ)
+    Q = generator_operator(model, θ; backend=backend)
     p0_vec = initial_distribution(model, p0)
     return uniformize(Q, t, p0_vec; tol=tol, gamma=gamma, γ=γ, max_terms=max_terms)
+end
+
+function _apply_uniformized_step(Q, state_term::AbstractVector, gamma_value::Real)
+    return state_term .+ apply_operator(Q, state_term) ./ gamma_value
 end

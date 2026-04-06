@@ -10,9 +10,9 @@ default_tail_tolerance() = 1.0e-12
 
 Choose an explicit uniformization rate for generator `Q`.
 
-If no rate is supplied, this returns the maximum exit rate
-`maximum(-diag(Q))`, which is sufficient under the package convention
-`dp/dt = Q * p` with columns summing to zero.
+If no rate is supplied, this returns the maximum exit rate reported by `Q`.
+For explicit matrices this is `maximum(-diag(Q))`. Operator backends provide
+the same quantity through `maximum_exit_rate(Q)`.
 """
 function choose_uniformization_rate(Q; gamma=nothing, γ=nothing)
     gamma_value = _resolve_gamma_argument(gamma, γ)
@@ -21,10 +21,7 @@ function choose_uniformization_rate(Q; gamma=nothing, γ=nothing)
         return Float64(gamma_value)
     end
 
-    size(Q, 1) == size(Q, 2) || throw(ArgumentError("generator matrix must be square"))
-    exit_rates = -Float64.(diag(Q))
-    any(!isfinite, exit_rates) && throw(ArgumentError("generator matrix must have finite diagonal entries"))
-    return isempty(exit_rates) ? 0.0 : max(0.0, maximum(exit_rates))
+    return maximum_exit_rate(Q)
 end
 
 function _resolve_gamma_argument(gamma, γ)

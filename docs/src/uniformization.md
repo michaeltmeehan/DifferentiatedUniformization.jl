@@ -32,13 +32,31 @@ contains:
 - `γ`: chosen or supplied uniformization rate
 - `tail_mass_bound`: truncation diagnostic from the Poisson tail
 
+## Generator Input
+
+`uniformize(...)` can now work with either:
+
+- an explicit generator matrix
+- a generator operator backend that supports applying `Q * p`
+
+The model-facing wrapper is:
+
+```julia
+result = propagate(model, theta, x0, t; backend=:sparse)
+```
+
+Current backends:
+
+- `backend=:sparse`: reference explicit sparse generator path
+- `backend=:structured`: structured operator path where implemented
+
 ## Automatic Gamma Selection
 
-If `gamma` is omitted, the package chooses
+If `gamma` is omitted, the package chooses the maximum exit rate under the
+package convention.
 
-`maximum(-diag(Q))`
-
-which is the maximum exit rate under the package convention.
+For explicit matrices this is `maximum(-diag(Q))`. For operator backends it is
+the backend's reported `maximum_exit_rate`.
 
 ## Truncation
 
@@ -52,9 +70,10 @@ using DifferentiatedUniformization
 
 model = SIModel(2)
 theta = [0.5]
-Q = generator(model, theta)
-p0 = initial_distribution(model, (1, 1))
+gamma = 1.0
 
-result = uniformize(Q, 0.7, p0; gamma=1.0)
-result.p
+sparse_result = propagate(model, theta, (1, 1), 0.7; gamma=gamma, backend=:sparse)
+structured_result = propagate(model, theta, (1, 1), 0.7; gamma=gamma, backend=:structured)
+
+structured_result.p ≈ sparse_result.p
 ```

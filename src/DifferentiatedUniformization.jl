@@ -5,6 +5,8 @@ using SparseArrays: SparseMatrixCSC, sparse
 using LinearAlgebra: diag
 
 export AbstractCTMCModel,
+    AbstractGeneratorOperator,
+    SparseGeneratorOperator,
     SIModel,
     SISModel,
     SIRModel,
@@ -18,6 +20,8 @@ export AbstractCTMCModel,
     states,
     generator,
     generator_derivatives,
+    generator_operator,
+    generator_derivative_operators,
     initial_distribution,
     uniformize,
     differentiate_uniformize,

@@ -21,16 +21,16 @@ function differentiate_uniformize(
     max_terms=nothing,
 )
     t >= 0 || throw(ArgumentError("time t must be nonnegative"))
-    size(Q, 1) == size(Q, 2) || throw(ArgumentError("generator matrix must be square"))
 
     p0_vec = Float64.(collect(p0))
-    size(Q, 1) == length(p0_vec) ||
+    state_dimension(Q) == length(p0_vec) ||
         throw(ArgumentError("generator dimension must match initial distribution length"))
 
     dQ_ops = collect(dQ)
     n_params = length(dQ_ops)
     for dQ_j in dQ_ops
-        size(dQ_j) == size(Q) || throw(ArgumentError("each generator derivative must match the size of Q"))
+        state_dimension(dQ_j) == state_dimension(Q) ||
+            throw(ArgumentError("each generator derivative must match the size of Q"))
     end
 
     gamma_value = choose_uniformization_rate(Q; gamma=gamma, γ=γ)
@@ -38,16 +38,12 @@ function differentiate_uniformize(
         return DUGradientResult(copy(p0_vec), zeros(length(p0_vec), n_params), 1, gamma_value, 0.0)
     end
 
-    max_exit_rate = maximum(-Float64.(diag(Q)))
+    max_exit_rate = maximum_exit_rate(Q)
     gamma_value + sqrt(eps(Float64)) >= max_exit_rate ||
         throw(ArgumentError("uniformization rate gamma must be at least the maximum exit rate"))
 
     lambda = gamma_value * Float64(t)
     n_terms, tail_mass_bound = choose_truncation_terms(lambda; tol=tol, max_terms=max_terms)
-
-    n_states = size(Q, 1)
-    P = sparse(1:n_states, 1:n_states, ones(Float64, n_states), n_states, n_states) + Q / gamma_value
-    dP = [dQ_j / gamma_value for dQ_j in dQ_ops]
 
     state_term = copy(p0_vec)
     gradient_terms = [zeros(length(p0_vec)) for _ in 1:n_params]
@@ -63,9 +59,11 @@ function differentiate_uniformize(
         previous_state = state_term
         previous_gradients = gradient_terms
 
-        state_term = P * previous_state
+        state_term = _apply_uniformized_step(Q, previous_state, gamma_value)
         gradient_terms = [
-            dP[j] * previous_state + P * previous_gradients[j] for j in 1:n_params
+            previous_gradients[j] .+
+            (apply_operator(dQ_ops[j], previous_state) .+ apply_operator(Q, previous_gradients[j])) ./ gamma_value
+            for j in 1:n_params
         ]
 
         weight *= lambda / n
@@ -117,9 +115,10 @@ function propagate_with_gradient(
     gamma=nothing,
     γ=nothing,
     max_terms=nothing,
+    backend::Symbol=:sparse,
 )
-    Q = generator(model, θ)
-    dQ = generator_derivatives(model, θ)
+    Q = generator_operator(model, θ; backend=backend)
+    dQ = generator_derivative_operators(model, θ; backend=backend)
     p0_vec = initial_distribution(model, p0)
     return differentiate_uniformize(Q, dQ, t, p0_vec; tol=tol, gamma=gamma, γ=γ, max_terms=max_terms)
 end

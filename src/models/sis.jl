@@ -18,6 +18,9 @@ Generator convention:
 - `dp/dt = Q * p`
 - each column of `Q` sums to zero
 - off-diagonal entry `Q[to, from]` is the transition rate from `from` to `to`
+
+This model also provides a structured operator backend for propagation and
+gradient propagation without materializing the full generator matrix.
 """
 struct SISModel <: AbstractCTMCModel
     population_size::Int
@@ -26,6 +29,17 @@ struct SISModel <: AbstractCTMCModel
         population_size > 0 || throw(ArgumentError("population_size must be positive"))
         return new(population_size)
     end
+end
+
+struct SISStructuredGenerator <: AbstractGeneratorOperator
+    population_size::Int
+    beta::Float64
+    gamma::Float64
+end
+
+struct SISStructuredDerivative <: AbstractGeneratorOperator
+    population_size::Int
+    parameter_index::Int
 end
 
 """
@@ -154,4 +168,103 @@ function generator_derivatives(model::SISModel, θ::AbstractVector{<:Real})
         sparse(rows_beta, cols_beta, vals_beta, n_states, n_states),
         sparse(rows_gamma, cols_gamma, vals_gamma, n_states, n_states),
     ]
+end
+
+function structured_generator_operator(model::SISModel, θ::AbstractVector{<:Real})
+    length(θ) == 2 || throw(ArgumentError("SISModel expects 2 parameters ordered as [β, γ]"))
+    β = Float64(θ[1])
+    γ = Float64(θ[2])
+    β >= 0.0 || throw(ArgumentError("SISModel parameter β must be nonnegative"))
+    γ >= 0.0 || throw(ArgumentError("SISModel parameter γ must be nonnegative"))
+    return SISStructuredGenerator(model.population_size, β, γ)
+end
+
+function structured_generator_derivative_operators(model::SISModel, θ::AbstractVector{<:Real})
+    length(θ) == 2 || throw(ArgumentError("SISModel expects 2 parameters ordered as [β, γ]"))
+    θ[1] >= 0 || throw(ArgumentError("SISModel parameter β must be nonnegative"))
+    θ[2] >= 0 || throw(ArgumentError("SISModel parameter γ must be nonnegative"))
+    return [
+        SISStructuredDerivative(model.population_size, 1),
+        SISStructuredDerivative(model.population_size, 2),
+    ]
+end
+
+state_dimension(op::SISStructuredGenerator) = op.population_size + 1
+state_dimension(op::SISStructuredDerivative) = op.population_size + 1
+
+function maximum_exit_rate(op::SISStructuredGenerator)
+    max_rate = 0.0
+    N = op.population_size
+    for i in 0:N
+        max_rate = max(max_rate, op.beta * (N - i) * i + op.gamma * i)
+    end
+    return max_rate
+end
+
+function maximum_exit_rate(op::SISStructuredDerivative)
+    max_rate = 0.0
+    N = op.population_size
+    for i in 0:N
+        rate = op.parameter_index == 1 ? (N - i) * i : i
+        max_rate = max(max_rate, float(rate))
+    end
+    return max_rate
+end
+
+function apply_operator(op::SISStructuredGenerator, v::AbstractVector)
+    length(v) == state_dimension(op) || throw(ArgumentError("vector length does not match SIS structured operator dimension"))
+    out = zeros(Float64, length(v))
+    N = op.population_size
+
+    for i in 0:N
+        idx = i + 1
+        infection_rate = op.beta * (N - i) * i
+        recovery_rate = op.gamma * i
+        total_rate = infection_rate + recovery_rate
+
+        out[idx] -= total_rate * v[idx]
+        if i < N
+            out[idx + 1] += infection_rate * v[idx]
+        end
+        if i > 0
+            out[idx - 1] += recovery_rate * v[idx]
+        end
+    end
+
+    return out
+end
+
+function apply_operator(op::SISStructuredDerivative, v::AbstractVector)
+    length(v) == state_dimension(op) || throw(ArgumentError("vector length does not match SIS structured derivative dimension"))
+    out = zeros(Float64, length(v))
+    N = op.population_size
+
+    for i in 0:N
+        idx = i + 1
+        if op.parameter_index == 1
+            rate = (N - i) * i
+            out[idx] -= rate * v[idx]
+            if i < N
+                out[idx + 1] += rate * v[idx]
+            end
+        else
+            rate = i
+            out[idx] -= rate * v[idx]
+            if i > 0
+                out[idx - 1] += rate * v[idx]
+            end
+        end
+    end
+
+    return out
+end
+
+function materialize(op::SISStructuredGenerator)
+    model = SISModel(op.population_size)
+    return generator(model, [op.beta, op.gamma])
+end
+
+function materialize(op::SISStructuredDerivative)
+    model = SISModel(op.population_size)
+    return generator_derivatives(model, [1.0, 1.0])[op.parameter_index]
 end
