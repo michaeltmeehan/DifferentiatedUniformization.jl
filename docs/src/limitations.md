@@ -10,7 +10,7 @@ This page describes what the package does not currently try to do.
 - first derivatives only
 - canonical epidemic models only
 - no built-in optimizer dependency
-- no implemented Gillespie simulation yet
+- no hidden-state observation model
 
 ## Important Gradient Caveat
 
@@ -35,6 +35,7 @@ Implication:
 - direct Turing.jl integration
 - a direct `LogDensityProblems.jl` adapter
 - broader interoperability layers
+- parallel ensemble simulation
 
 ## What The Current Package Is Best At
 
@@ -43,3 +44,4 @@ The current implementation is best viewed as:
 - a validated finite-state CTMC core
 - an explicit reference implementation for SI/SIS/SIR
 - a testbed for gradient-based calibration using differentiated uniformization
+- a benchmark target for Gillespie-versus-DU comparisons

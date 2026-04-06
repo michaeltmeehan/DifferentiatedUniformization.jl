@@ -1,4 +1,4 @@
-@testset "Likelihood and simulation layers" begin
+@testset "Likelihood layer" begin
     si_model = SIModel(2)
     θ_si = [0.5]
     gamma_si = 1.0
@@ -55,8 +55,4 @@
     impossible_ll, impossible_grad = loglikelihood_and_gradient(si_model, θ_si, zero_time_jump; gamma=gamma_si)
     @test impossible_ll == -Inf
     @test all(isnan, impossible_grad)
-
-    err = capture_exception(() -> simulate_gillespie(sis_model, θ_sis, (1, 1), 1.0, Random.default_rng()))
-    @test err isa UnimplementedDUError
-    @test occursin("simulate_gillespie", sprint(showerror, err))
 end

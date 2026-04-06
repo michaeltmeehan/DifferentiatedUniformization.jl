@@ -36,6 +36,13 @@ Likelihood-facing layer.
 - `likelihood.jl`: exact-state path likelihoods and gradients
 - `logdensity.jl`: thin package-local log-density wrapper
 
+## `src/simulation/`
+
+Simulation and empirical-summary helpers.
+
+- `gillespie.jl`: single-trajectory Gillespie simulation, ensembles, and
+  empirical state-distribution helpers
+
 ## `src/utils/`
 
 Small utility helpers used mainly for validation.
@@ -52,6 +59,7 @@ Small runnable scripts demonstrating:
 - log-density wrapping
 - diagnostic grid scans
 - gradient-based estimation
+- Gillespie trajectories and ensemble comparisons
 
 ## `test/`
 
@@ -63,3 +71,4 @@ Small explicit validation tests for:
 - likelihoods
 - log-density wrapper
 - calibration workflows
+- Gillespie simulation and Monte Carlo agreement

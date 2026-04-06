@@ -140,6 +140,7 @@ This repository now has a working finite-state core for:
 - a thin log-density wrapper for calibration-oriented workflows
 - a small synthetic calibration example on exact-state path data
 - a small synthetic gradient-based estimation example using DU gradients
+- Gillespie simulation, ensemble summaries, and empirical DU comparisons
 
 Current gradient convention:
 

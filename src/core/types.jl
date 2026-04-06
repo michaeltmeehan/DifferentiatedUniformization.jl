@@ -78,3 +78,46 @@ struct ExactStatePath{S,T<:Real}
         return new{eltype(states),eltype(time_vec)}(collect(states), time_vec)
     end
 end
+
+"""
+    CTMCTrajectory(states, times, final_time)
+
+Piecewise-constant CTMC sample path produced by Gillespie simulation.
+
+- `states[k]` is the state entered at time `times[k]`
+- `times[1]` is the simulation start time
+- `final_time` is the horizon up to which the path is defined
+
+The path remains in `states[end]` on the interval `[times[end], final_time]`.
+"""
+struct CTMCTrajectory{S,T<:Real}
+    states::Vector{S}
+    times::Vector{T}
+    final_time::T
+
+    function CTMCTrajectory(states::AbstractVector, times::AbstractVector{<:Real}, final_time::Real)
+        length(states) == length(times) ||
+            throw(ArgumentError("trajectory states and times must have the same length"))
+        length(states) >= 1 || throw(ArgumentError("trajectory must contain at least one state"))
+
+        time_vec = collect(times)
+        all(diff(time_vec) .> zero(eltype(time_vec))) ||
+            throw(ArgumentError("trajectory event times must be strictly increasing"))
+        final_time >= time_vec[end] ||
+            throw(ArgumentError("final_time must be at least the last event time"))
+
+        return new{eltype(states),eltype(time_vec)}(collect(states), time_vec, final_time)
+    end
+end
+
+"""
+    CTMCEnsemble
+
+Container for a collection of CTMC sample paths simulated over a common time
+horizon.
+"""
+struct CTMCEnsemble{S,T<:Real,P}
+    terminal_states::Vector{S}
+    final_time::T
+    trajectories::P
+end

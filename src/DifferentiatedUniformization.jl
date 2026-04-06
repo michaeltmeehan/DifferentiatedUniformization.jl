@@ -11,6 +11,8 @@ export AbstractCTMCModel,
     DUResult,
     DUGradientResult,
     ExactStatePath,
+    CTMCTrajectory,
+    CTMCEnsemble,
     ExactPathLogDensity,
     UnimplementedDUError,
     states,
@@ -26,7 +28,12 @@ export AbstractCTMCModel,
     dimension,
     logdensity,
     logdensity_and_gradient,
-    simulate_gillespie
+    state_at_time,
+    states_on_grid,
+    simulate_gillespie,
+    simulate_ensemble,
+    empirical_terminal_distribution,
+    empirical_state_probabilities
 
 include("core/types.jl")
 include("core/states.jl")

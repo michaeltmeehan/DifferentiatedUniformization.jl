@@ -12,11 +12,13 @@ The package currently supports:
 - first derivatives by differentiated uniformization
 - exact-state path likelihoods for fully observed transitions
 - a thin package-local log-density wrapper for calibration workflows
+- Gillespie simulation, ensemble summaries, and empirical DU comparisons
 
 ## What To Read First
 
 - [Getting Started](getting-started.md): the shortest path from model to propagation
 - [Calibration Tutorial](calibration-tutorial.md): end-to-end gradient-based estimation on synthetic data
+- [Simulation And Benchmarking](simulation.md): Gillespie trajectories, ensembles, and DU comparison
 - [Conventions](conventions.md): the probability-vector, generator, and gamma conventions used everywhere
 
 ## Documentation Map
@@ -28,6 +30,7 @@ The package currently supports:
 - [Differentiated Uniformization](differentiated-uniformization.md)
 - [Exact-State Path Likelihoods](likelihoods.md)
 - [Calibration Tutorial](calibration-tutorial.md)
+- [Simulation And Benchmarking](simulation.md)
 - [Getting Started](getting-started.md)
 - [Architecture](architecture.md)
 - [Limitations](limitations.md)
@@ -43,12 +46,14 @@ Core supported workflows:
 5. propagate probabilities and gradients with `propagate_with_gradient(...)`
 6. evaluate path likelihoods with `loglikelihood(...)` and `loglikelihood_and_gradient(...)`
 7. wrap the likelihood as `ExactPathLogDensity(...)` for optimization-style workflows
+8. simulate trajectories and ensembles with Gillespie methods for validation and benchmarking
 
 Diagnostic / sanity-check workflows:
 
 - small grid scans over one parameter
 - direct inspection of generators and derivative matrices
 - exact comparison against matrix exponential calculations on very small systems
+- Monte Carlo comparison of empirical state distributions against DU propagation
 
 Deferred workflows:
 

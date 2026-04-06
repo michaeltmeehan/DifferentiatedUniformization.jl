@@ -9,6 +9,8 @@
         :DUResult,
         :DUGradientResult,
         :ExactStatePath,
+        :CTMCTrajectory,
+        :CTMCEnsemble,
         :ExactPathLogDensity,
         :UnimplementedDUError,
         :states,
@@ -24,7 +26,12 @@
         :dimension,
         :logdensity,
         :logdensity_and_gradient,
+        :state_at_time,
+        :states_on_grid,
         :simulate_gillespie,
+        :simulate_ensemble,
+        :empirical_terminal_distribution,
+        :empirical_state_probabilities,
     ]
 
     for name in expected_exports
