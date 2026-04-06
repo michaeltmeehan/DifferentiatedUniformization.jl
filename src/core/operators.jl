@@ -62,13 +62,16 @@ Return a generator backend suitable for propagation.
 Currently supported backends:
 
 - `:sparse`: explicit sparse-matrix reference backend
-- `:structured`: structured operator backend where available
+- `:structured`: matrix-free structured operator backend where available
+- `:tensor`: tensor/Kronecker backend where available
 """
 function generator_operator(model::AbstractCTMCModel, θ; backend::Symbol=:sparse)
     if backend === :sparse
         return SparseGeneratorOperator(generator(model, θ))
     elseif backend === :structured
         return structured_generator_operator(model, θ)
+    elseif backend === :tensor
+        return tensor_generator_operator(model, θ)
     else
         throw(ArgumentError("unknown generator backend $(backend)"))
     end
@@ -84,6 +87,8 @@ function generator_derivative_operators(model::AbstractCTMCModel, θ; backend::S
         return [SparseGeneratorOperator(dQ) for dQ in generator_derivatives(model, θ)]
     elseif backend === :structured
         return structured_generator_derivative_operators(model, θ)
+    elseif backend === :tensor
+        return tensor_generator_derivative_operators(model, θ)
     else
         throw(ArgumentError("unknown generator backend $(backend)"))
     end
@@ -95,6 +100,14 @@ end
 
 function structured_generator_derivative_operators(model::AbstractCTMCModel, θ)
     throw(ArgumentError("structured derivative backend is not implemented for model type $(typeof(model))"))
+end
+
+function tensor_generator_operator(model::AbstractCTMCModel, θ)
+    throw(ArgumentError("tensor generator backend is not implemented for model type $(typeof(model))"))
+end
+
+function tensor_generator_derivative_operators(model::AbstractCTMCModel, θ)
+    throw(ArgumentError("tensor derivative backend is not implemented for model type $(typeof(model))"))
 end
 
 state_dimension(Q::AbstractMatrix) = size(Q, 1)

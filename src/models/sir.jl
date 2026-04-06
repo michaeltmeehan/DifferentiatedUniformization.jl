@@ -4,13 +4,13 @@
 Finite-state susceptible-infectious-removed epidemic model with a fixed total
 population size.
 
-Parameter ordering for `generator(model, θ)` and
-`generator_derivatives(model, θ)`:
+Parameter ordering for `generator(model, theta)` and
+`generator_derivatives(model, theta)`:
 
-- `θ[1] = β`: infection rate for transitions `(S, I, R) -> (S - 1, I + 1, R)`
-  with rate `β * S * I`
-- `θ[2] = γ`: recovery rate for transitions `(S, I - 1, R + 1)`
-  with rate `γ * I`
+- `theta[1] = beta`: infection rate for transitions `(S, I, R) -> (S - 1, I + 1, R)`
+  with rate `beta * S * I`
+- `theta[2] = gamma`: recovery rate for transitions `(S, I, R) -> (S, I - 1, R + 1)`
+  with rate `gamma * I`
 
 Generator convention:
 
@@ -19,8 +19,13 @@ Generator convention:
 - each column of `Q` sums to zero
 - off-diagonal entry `Q[to, from]` is the transition rate from `from` to `to`
 
-This model also provides a structured operator backend for propagation and
-gradient propagation without materializing the full generator matrix.
+This model provides both a matrix-free structured backend and a tensor backend.
+The tensor backend follows the SIR tensor-product construction in the
+differentiated-uniformization paper on the full Cartesian `(S, I)` grid.
+To preserve the package's established raw-parameter convention
+`beta * S * I` and `gamma * I`, the tensor backend uses the paper's operator
+structure but scales the infection term to match the existing sparse reference
+backend.
 """
 struct SIRModel <: AbstractCTMCModel
     population_size::Int
@@ -44,6 +49,37 @@ struct SIRStructuredDerivative <: AbstractGeneratorOperator
     parameter_index::Int
     state_space::Vector{Tuple{Int,Int,Int}}
     index_by_state::Dict{Tuple{Int,Int,Int},Int}
+end
+
+struct SIRTensorGenerator <: AbstractGeneratorOperator
+    population_size::Int
+    beta::Float64
+    gamma::Float64
+    s_plus_inf::SparseMatrixCSC{Float64,Int}
+    s_minus_inf::SparseMatrixCSC{Float64,Int}
+    s_plus_rec::SparseMatrixCSC{Float64,Int}
+    s_minus_rec::SparseMatrixCSC{Float64,Int}
+    i_plus_inf::SparseMatrixCSC{Float64,Int}
+    i_minus_inf::SparseMatrixCSC{Float64,Int}
+    i_plus_rec::SparseMatrixCSC{Float64,Int}
+    i_minus_rec::SparseMatrixCSC{Float64,Int}
+    grid_indices::Vector{Int}
+    state_space::Vector{Tuple{Int,Int,Int}}
+end
+
+struct SIRTensorDerivative <: AbstractGeneratorOperator
+    population_size::Int
+    parameter_index::Int
+    s_plus_inf::SparseMatrixCSC{Float64,Int}
+    s_minus_inf::SparseMatrixCSC{Float64,Int}
+    s_plus_rec::SparseMatrixCSC{Float64,Int}
+    s_minus_rec::SparseMatrixCSC{Float64,Int}
+    i_plus_inf::SparseMatrixCSC{Float64,Int}
+    i_minus_inf::SparseMatrixCSC{Float64,Int}
+    i_plus_rec::SparseMatrixCSC{Float64,Int}
+    i_minus_rec::SparseMatrixCSC{Float64,Int}
+    grid_indices::Vector{Int}
+    state_space::Vector{Tuple{Int,Int,Int}}
 end
 
 """
@@ -87,12 +123,12 @@ function initial_distribution(model::SIRModel, p0::AbstractVector{<:Real})
     return Float64.(collect(p0))
 end
 
-function generator(model::SIRModel, θ::AbstractVector{<:Real})
-    length(θ) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [β, γ]"))
-    β = Float64(θ[1])
-    γ = Float64(θ[2])
-    β >= 0.0 || throw(ArgumentError("SIRModel parameter β must be nonnegative"))
-    γ >= 0.0 || throw(ArgumentError("SIRModel parameter γ must be nonnegative"))
+function generator(model::SIRModel, theta::AbstractVector{<:Real})
+    length(theta) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [beta, gamma]"))
+    beta = Float64(theta[1])
+    gamma = Float64(theta[2])
+    beta >= 0.0 || throw(ArgumentError("SIRModel parameter beta must be nonnegative"))
+    gamma >= 0.0 || throw(ArgumentError("SIRModel parameter gamma must be nonnegative"))
 
     state_space = states(model)
     index_by_state = Dict(state => idx for (idx, state) in enumerate(state_space))
@@ -106,7 +142,7 @@ function generator(model::SIRModel, θ::AbstractVector{<:Real})
 
         if s > 0 && i > 0
             to_state = (s - 1, i + 1, r)
-            rate = β * s * i
+            rate = beta * s * i
             to_idx = index_by_state[to_state]
             push!(rows, to_idx)
             push!(cols, from_idx)
@@ -116,7 +152,7 @@ function generator(model::SIRModel, θ::AbstractVector{<:Real})
 
         if i > 0
             to_state = (s, i - 1, r + 1)
-            rate = γ * i
+            rate = gamma * i
             to_idx = index_by_state[to_state]
             push!(rows, to_idx)
             push!(cols, from_idx)
@@ -132,10 +168,10 @@ function generator(model::SIRModel, θ::AbstractVector{<:Real})
     return sparse(rows, cols, vals, n_states, n_states)
 end
 
-function generator_derivatives(model::SIRModel, θ::AbstractVector{<:Real})
-    length(θ) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [β, γ]"))
-    θ[1] >= 0 || throw(ArgumentError("SIRModel parameter β must be nonnegative"))
-    θ[2] >= 0 || throw(ArgumentError("SIRModel parameter γ must be nonnegative"))
+function generator_derivatives(model::SIRModel, theta::AbstractVector{<:Real})
+    length(theta) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [beta, gamma]"))
+    theta[1] >= 0 || throw(ArgumentError("SIRModel parameter beta must be nonnegative"))
+    theta[2] >= 0 || throw(ArgumentError("SIRModel parameter gamma must be nonnegative"))
 
     state_space = states(model)
     index_by_state = Dict(state => idx for (idx, state) in enumerate(state_space))
@@ -186,21 +222,21 @@ function generator_derivatives(model::SIRModel, θ::AbstractVector{<:Real})
     ]
 end
 
-function structured_generator_operator(model::SIRModel, θ::AbstractVector{<:Real})
-    length(θ) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [β, γ]"))
-    β = Float64(θ[1])
-    γ = Float64(θ[2])
-    β >= 0.0 || throw(ArgumentError("SIRModel parameter β must be nonnegative"))
-    γ >= 0.0 || throw(ArgumentError("SIRModel parameter γ must be nonnegative"))
+function structured_generator_operator(model::SIRModel, theta::AbstractVector{<:Real})
+    length(theta) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [beta, gamma]"))
+    beta = Float64(theta[1])
+    gamma = Float64(theta[2])
+    beta >= 0.0 || throw(ArgumentError("SIRModel parameter beta must be nonnegative"))
+    gamma >= 0.0 || throw(ArgumentError("SIRModel parameter gamma must be nonnegative"))
     state_space = states(model)
     index_by_state = Dict(state => idx for (idx, state) in enumerate(state_space))
-    return SIRStructuredGenerator(model.population_size, β, γ, state_space, index_by_state)
+    return SIRStructuredGenerator(model.population_size, beta, gamma, state_space, index_by_state)
 end
 
-function structured_generator_derivative_operators(model::SIRModel, θ::AbstractVector{<:Real})
-    length(θ) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [β, γ]"))
-    θ[1] >= 0 || throw(ArgumentError("SIRModel parameter β must be nonnegative"))
-    θ[2] >= 0 || throw(ArgumentError("SIRModel parameter γ must be nonnegative"))
+function structured_generator_derivative_operators(model::SIRModel, theta::AbstractVector{<:Real})
+    length(theta) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [beta, gamma]"))
+    theta[1] >= 0 || throw(ArgumentError("SIRModel parameter beta must be nonnegative"))
+    theta[2] >= 0 || throw(ArgumentError("SIRModel parameter gamma must be nonnegative"))
     state_space = states(model)
     index_by_state = Dict(state => idx for (idx, state) in enumerate(state_space))
     return [
@@ -209,8 +245,73 @@ function structured_generator_derivative_operators(model::SIRModel, θ::Abstract
     ]
 end
 
+function tensor_generator_operator(model::SIRModel, theta::AbstractVector{<:Real})
+    length(theta) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [beta, gamma]"))
+    beta = Float64(theta[1])
+    gamma = Float64(theta[2])
+    beta >= 0.0 || throw(ArgumentError("SIRModel parameter beta must be nonnegative"))
+    gamma >= 0.0 || throw(ArgumentError("SIRModel parameter gamma must be nonnegative"))
+
+    terms = _sir_tensor_terms(model.population_size)
+    return SIRTensorGenerator(
+        model.population_size,
+        beta,
+        gamma,
+        terms.s_plus_inf,
+        terms.s_minus_inf,
+        terms.s_plus_rec,
+        terms.s_minus_rec,
+        terms.i_plus_inf,
+        terms.i_minus_inf,
+        terms.i_plus_rec,
+        terms.i_minus_rec,
+        terms.grid_indices,
+        terms.state_space,
+    )
+end
+
+function tensor_generator_derivative_operators(model::SIRModel, theta::AbstractVector{<:Real})
+    length(theta) == 2 || throw(ArgumentError("SIRModel expects 2 parameters ordered as [beta, gamma]"))
+    theta[1] >= 0 || throw(ArgumentError("SIRModel parameter beta must be nonnegative"))
+    theta[2] >= 0 || throw(ArgumentError("SIRModel parameter gamma must be nonnegative"))
+
+    terms = _sir_tensor_terms(model.population_size)
+    return [
+        SIRTensorDerivative(
+            model.population_size,
+            1,
+            terms.s_plus_inf,
+            terms.s_minus_inf,
+            terms.s_plus_rec,
+            terms.s_minus_rec,
+            terms.i_plus_inf,
+            terms.i_minus_inf,
+            terms.i_plus_rec,
+            terms.i_minus_rec,
+            terms.grid_indices,
+            terms.state_space,
+        ),
+        SIRTensorDerivative(
+            model.population_size,
+            2,
+            terms.s_plus_inf,
+            terms.s_minus_inf,
+            terms.s_plus_rec,
+            terms.s_minus_rec,
+            terms.i_plus_inf,
+            terms.i_minus_inf,
+            terms.i_plus_rec,
+            terms.i_minus_rec,
+            terms.grid_indices,
+            terms.state_space,
+        ),
+    ]
+end
+
 state_dimension(op::SIRStructuredGenerator) = length(op.state_space)
 state_dimension(op::SIRStructuredDerivative) = length(op.state_space)
+state_dimension(op::SIRTensorGenerator) = length(op.state_space)
+state_dimension(op::SIRTensorDerivative) = length(op.state_space)
 
 function maximum_exit_rate(op::SIRStructuredGenerator)
     max_rate = 0.0
@@ -221,6 +322,23 @@ function maximum_exit_rate(op::SIRStructuredGenerator)
 end
 
 function maximum_exit_rate(op::SIRStructuredDerivative)
+    max_rate = 0.0
+    for (s, i, _) in op.state_space
+        rate = op.parameter_index == 1 ? s * i : i
+        max_rate = max(max_rate, float(rate))
+    end
+    return max_rate
+end
+
+function maximum_exit_rate(op::SIRTensorGenerator)
+    max_rate = 0.0
+    for (s, i, _) in op.state_space
+        max_rate = max(max_rate, op.beta * s * i + op.gamma * i)
+    end
+    return max_rate
+end
+
+function maximum_exit_rate(op::SIRTensorDerivative)
     max_rate = 0.0
     for (s, i, _) in op.state_space
         rate = op.parameter_index == 1 ? s * i : i
@@ -279,6 +397,35 @@ function apply_operator(op::SIRStructuredDerivative, v::AbstractVector)
     return out
 end
 
+function apply_operator(op::SIRTensorGenerator, v::AbstractVector)
+    length(v) == state_dimension(op) || throw(ArgumentError("vector length does not match SIR tensor operator dimension"))
+    x = _sir_tensor_embed(v, op.population_size, op.grid_indices)
+    y = zeros(Float64, size(x))
+
+    y .+= op.beta .* _apply_tensor_term(op.s_plus_inf, op.i_plus_inf, x)
+    y .+= op.gamma .* _apply_tensor_term(op.s_plus_rec, op.i_plus_rec, x)
+    y .-= op.beta .* _apply_tensor_term(op.s_minus_inf, op.i_minus_inf, x)
+    y .-= op.gamma .* _apply_tensor_term(op.s_minus_rec, op.i_minus_rec, x)
+
+    return _sir_tensor_project(y, op.grid_indices)
+end
+
+function apply_operator(op::SIRTensorDerivative, v::AbstractVector)
+    length(v) == state_dimension(op) || throw(ArgumentError("vector length does not match SIR tensor derivative dimension"))
+    x = _sir_tensor_embed(v, op.population_size, op.grid_indices)
+    y = zeros(Float64, size(x))
+
+    if op.parameter_index == 1
+        y .+= _apply_tensor_term(op.s_plus_inf, op.i_plus_inf, x)
+        y .-= _apply_tensor_term(op.s_minus_inf, op.i_minus_inf, x)
+    else
+        y .+= _apply_tensor_term(op.s_plus_rec, op.i_plus_rec, x)
+        y .-= _apply_tensor_term(op.s_minus_rec, op.i_minus_rec, x)
+    end
+
+    return _sir_tensor_project(y, op.grid_indices)
+end
+
 function materialize(op::SIRStructuredGenerator)
     model = SIRModel(op.population_size)
     return generator(model, [op.beta, op.gamma])
@@ -287,4 +434,81 @@ end
 function materialize(op::SIRStructuredDerivative)
     model = SIRModel(op.population_size)
     return generator_derivatives(model, [1.0, 1.0])[op.parameter_index]
+end
+
+function materialize(op::SIRTensorGenerator)
+    return _materialize_from_operator(op)
+end
+
+function materialize(op::SIRTensorDerivative)
+    return _materialize_from_operator(op)
+end
+
+function _sir_tensor_terms(N::Int)
+    n = N + 1
+    state_space = states(SIRModel(N))
+    grid_indices = [_sir_grid_linear_index(N, s, i) for (s, i, _) in state_space]
+
+    s_plus_inf = sparse(1:(n - 1), 2:n, Float64.(1:N), n, n)
+    s_minus_inf = sparse(1:n, 1:n, Float64.(0:N), n, n)
+    s_plus_rec = sparse(1:n, 1:n, ones(Float64, n), n, n)
+    s_minus_rec = sparse(1:n, 1:n, ones(Float64, n), n, n)
+
+    i_plus_inf = sparse(2:n, 1:(n - 1), Float64.(0:(N - 1)), n, n)
+    i_minus_inf = sparse(1:n, 1:n, Float64.(0:N), n, n)
+    i_plus_rec = sparse(1:(n - 1), 2:n, Float64.(1:N), n, n)
+    i_minus_rec = sparse(1:n, 1:n, Float64.(0:N), n, n)
+
+    return (
+        s_plus_inf=s_plus_inf,
+        s_minus_inf=s_minus_inf,
+        s_plus_rec=s_plus_rec,
+        s_minus_rec=s_minus_rec,
+        i_plus_inf=i_plus_inf,
+        i_minus_inf=i_minus_inf,
+        i_plus_rec=i_plus_rec,
+        i_minus_rec=i_minus_rec,
+        grid_indices=grid_indices,
+        state_space=state_space,
+    )
+end
+
+function _sir_grid_linear_index(N::Int, s::Int, i::Int)
+    return LinearIndices((N + 1, N + 1))[i + 1, s + 1]
+end
+
+function _sir_tensor_embed(v::AbstractVector, N::Int, grid_indices::AbstractVector{Int})
+    x = zeros(Float64, N + 1, N + 1)
+    x[grid_indices] = Float64.(collect(v))
+    return x
+end
+
+function _sir_tensor_project(x::AbstractMatrix, grid_indices::AbstractVector{Int})
+    return Float64[x[idx] for idx in grid_indices]
+end
+
+function _apply_tensor_term(s_factor, i_factor, x::AbstractMatrix)
+    return i_factor * x * transpose(s_factor)
+end
+
+function _materialize_from_operator(op::AbstractGeneratorOperator)
+    n = state_dimension(op)
+    rows = Int[]
+    cols = Int[]
+    vals = Float64[]
+
+    for j in 1:n
+        basis = zeros(Float64, n)
+        basis[j] = 1.0
+        image = apply_operator(op, basis)
+        for i in 1:n
+            if !iszero(image[i])
+                push!(rows, i)
+                push!(cols, j)
+                push!(vals, image[i])
+            end
+        end
+    end
+
+    return sparse(rows, cols, vals, n, n)
 end

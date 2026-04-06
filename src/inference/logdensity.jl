@@ -30,6 +30,7 @@ Backend convention:
 
 - `backend=:sparse` uses the reference explicit sparse-matrix generator path
 - `backend=:structured` uses a structured generator operator where available
+- `backend=:tensor` uses a tensor/Kronecker backend where available
 
 This wrapper is package-local for now. It fills the same conceptual role as a
 lightweight `LogDensityProblems`-style object without forcing the core package
@@ -57,7 +58,8 @@ function ExactPathLogDensity(
         max_terms isa Integer || throw(ArgumentError("max_terms must be an integer or nothing"))
         max_terms >= 1 || throw(ArgumentError("max_terms must be at least 1"))
     end
-    backend in (:sparse, :structured) || throw(ArgumentError("backend must be :sparse or :structured"))
+    backend in (:sparse, :structured, :tensor) ||
+        throw(ArgumentError("backend must be :sparse, :structured, or :tensor"))
     return ExactPathLogDensity{typeof(model),typeof(data),typeof(float(tol)),typeof(gamma)}(
         model,
         data,

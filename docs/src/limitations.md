@@ -12,6 +12,7 @@ This page describes what the package does not currently try to do.
 - no built-in optimizer dependency
 - no hidden-state observation model
 - structured operator backend remains limited to the canonical SI, SIS, and SIR models
+- tensor/Kronecker backend is currently implemented for SIR only
 
 ## Important Gradient Caveat
 
@@ -38,6 +39,7 @@ Implication:
 - broader interoperability layers
 - parallel ensemble simulation
 - broader structured backends beyond the canonical models
+- tensor/Kronecker backends beyond the current SIR construction
 
 ## What The Current Package Is Best At
 

@@ -18,6 +18,7 @@ Backend convention:
 
 - `backend=:sparse` uses the reference explicit sparse-matrix generator path
 - `backend=:structured` uses a structured generator operator where available
+- `backend=:tensor` uses a tensor/Kronecker backend where available
 """
 function loglikelihood(
     model::AbstractCTMCModel,
@@ -74,6 +75,7 @@ Backend convention:
 
 - `backend=:sparse` uses the reference explicit sparse-matrix generator path
 - `backend=:structured` uses a structured generator operator where available
+- `backend=:tensor` uses a tensor/Kronecker backend where available
 """
 function loglikelihood_and_gradient(
     model::AbstractCTMCModel,

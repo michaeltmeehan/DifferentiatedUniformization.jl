@@ -18,6 +18,7 @@ These files define:
 - reference sparse generator derivative matrices
 - initial-distribution helpers
 - structured generator operators where implemented
+- tensor/Kronecker operators where implemented
 
 ## `src/core/`
 
@@ -34,6 +35,7 @@ The most important architectural split in the current package is:
 
 - explicit sparse generators remain the reference backend
 - DU algorithms are written against a small operator interface
+- structured and tensor backends plug into that same operator interface
 
 That interface currently needs only a few operations:
 
@@ -52,7 +54,7 @@ Likelihood-facing layer.
 - `logdensity.jl`: thin package-local log-density wrapper
 
 These functions now accept a `backend` keyword so the same likelihood code can
-run against either the sparse or structured propagation path.
+run against sparse, structured, or tensor propagation paths where available.
 
 ## `src/simulation/`
 
@@ -81,14 +83,14 @@ Small runnable scripts demonstrating:
 - diagnostic grid scans
 - gradient-based estimation
 - Gillespie trajectories and ensemble comparisons
-- sparse-versus-structured backend agreement for SI
+- backend agreement examples, including the SIR tensor backend
 
 ## `test/`
 
 Small explicit validation tests for:
 
 - state spaces and generators
-- sparse-versus-structured operator agreement
+- sparse-versus-operator backend agreement
 - uniformization
 - differentiated uniformization
 - likelihoods

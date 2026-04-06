@@ -11,6 +11,7 @@ The package currently supports:
 - transient propagation by uniformization
 - first derivatives by differentiated uniformization
 - sparse and structured generator backends for the canonical models
+- a paper-based tensor/Kronecker SIR backend
 - exact-state path likelihoods for fully observed transitions
 - a thin package-local log-density wrapper for calibration workflows
 - Gillespie simulation, ensemble summaries, and empirical DU comparisons
@@ -55,6 +56,7 @@ Diagnostic / sanity-check workflows:
 - small grid scans over one parameter
 - direct inspection of generators and derivative matrices
 - sparse-versus-structured backend agreement checks
+- sparse-versus-tensor backend agreement checks for SIR
 - exact comparison against matrix exponential calculations on very small systems
 - Monte Carlo comparison of empirical state distributions against DU propagation
 

@@ -49,6 +49,7 @@ Current backends:
 
 - `backend=:sparse`: reference explicit sparse generator path
 - `backend=:structured`: structured operator path where implemented
+- `backend=:tensor`: tensor/Kronecker operator path where implemented
 
 ## Automatic Gamma Selection
 
